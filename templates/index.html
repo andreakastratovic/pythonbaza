@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Manage Users</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+    <script>
+        // Function to fetch and display all users
+        function fetchUsers() {
+            fetch('/users')
+                .then(response => response.json())
+                .then(users => {
+                    const userTable = document.getElementById('userTable');
+                    userTable.innerHTML = '';  // Clear the table before adding new data
+
+                    users.forEach(user => {
+                        const row = document.createElement('tr');
+                        row.innerHTML = `
+                            <td>${user.id}</td>
+                            <td>${user.name}</td>
+                            <td>${user.age}</td>
+                            <td>${user.email}</td>
+                            <td>
+                                <button onclick="showUpdateForm(${user.id}, '${user.name}', ${user.age}, '${user.email}')">Update</button>
+                                <button onclick="deleteUser(${user.id})">Delete</button>
+                            </td>
+                        `;
+                        
+                        // Add the row to the table
+                        userTable.appendChild(row);
+                    });
+                })
+                .catch(error => console.error('Error fetching users:', error));
+        }
+
+        // Function to create a new user
+        function createUser() {
+            const name = document.getElementById('name').value;
+            const age = document.getElementById('age').value;
+            const email = document.getElementById('email').value;
+
+            fetch('/users', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ name: name, age: age, email: email })
+            })
+            .then(response => response.json())
+            .then(data => {
+                alert('User created successfully!');
+                fetchUsers();  // Refresh the list of users
+            })
+            .catch((error) => console.error('Error:', error));
+        }
+
+        // Function to show the update form
+        function showUpdateForm(id, currentName, currentAge, currentEmail) {
+            // Create a form dynamically for updating user
+            const updateFormHtml = `
+                <td>${id}</td>
+                <td><input type="text" id="updateName" value="${currentName}" required></td>
+                <td><input type="number" id="updateAge" value="${currentAge}" required></td>
+                <td><input type="email" id="updateEmail" value="${currentEmail}" required></td>
+                <td>
+                    <button onclick="updateUser(${id})">Save</button>
+                    <button onclick="fetchUsers()">Cancel</button>
+                </td>
+            `;
+            
+            const row = document.createElement('tr');
+            row.innerHTML = updateFormHtml;
+
+            // Find the existing user row and replace it with the update form
+            const userTable = document.getElementById('userTable');
+            const userRows = userTable.getElementsByTagName('tr');
+            for (let i = 0; i < userRows.length; i++) {
+                if (userRows[i].children[0].textContent == id) {
+                    userTable.replaceChild(row, userRows[i]);
+                    break;
+                }
+            }
+        }
+
+        // Function to update a user
+        function updateUser(userId) {
+            const newName = document.getElementById('updateName').value;
+            const newAge = document.getElementById('updateAge').value;
+            const newEmail = document.getElementById('updateEmail').value;
+
+            fetch(`/users/${userId}`, {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ name: newName, age: newAge, email: newEmail })
+            })
+            .then(response => response.json())
+            .then(data => {
+                alert('User updated successfully!');
+                fetchUsers();  // Refresh the list of users
+            })
+            .catch(error => console.error('Error updating user:', error));
+        }
+
+        // Function to delete a user
+        function deleteUser(userId) {
+            fetch(`/users/${userId}`, {
+                method: 'DELETE'
+            })
+            .then(response => response.json())
+            .then(data => {
+                alert('User deleted successfully!');
+                fetchUsers();  // Refresh the list of users
+            })
+            .catch(error => console.error('Error deleting user:', error));
+        }
+
+        // Fetch users on page load
+        window.onload = fetchUsers;
+    </script>
+</head>
+<body>
+    <h1>Manage Users</h1>
+
+    <!-- Form to create a new user -->
+    <h2>Create New User</h2>
+    <form id="userForm" onsubmit="event.preventDefault(); createUser();">
+        <label for="name">Name:</label><br>
+        <input type="text" id="name" name="name" required><br><br>
+        <label for="age">Age:</label><br>
+        <input type="number" id="age" name="age" required><br><br>
+        <label for="email">Email:</label><br>
+        <input type="email" id="email" name="email" required><br><br>
+        <button type="submit">Create User</button>
+    </form>
+
+    <!-- Table to display all users -->
+    <h2>List of Users</h2>
+    <table border="1">
+        <thead>
+            <tr>
+                <th>ID</th>
+                <th>Name</th>
+                <th>Age</th>
+                <th>Email</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody id="userTable">
+            <!-- User data will be dynamically inserted here -->
+        </tbody>
+    </table>
+</body>
+</html>

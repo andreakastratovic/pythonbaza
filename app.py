@@ -1,12 +1,17 @@
-from flask import Flask, request, jsonify
 import sqlite3
+from flask import Flask, request, jsonify, render_template
 
 app = Flask(__name__)
 
 def get_db_connection():
-    conn = sqlite3.connect('baza.db')  
-    conn.row_factory = sqlite3.Row 
+    conn = sqlite3.connect('baza.db', check_same_thread=False)  
+    conn.row_factory = sqlite3.Row
     return conn
+
+# Render the HTML page
+@app.route('/')
+def index():
+    return render_template('index.html')
 
 # Route to fetch all users
 @app.route('/users', methods=['GET'])
@@ -29,17 +34,22 @@ def get_user(id):
 # Route to add a new user 
 @app.route('/users', methods=['POST'])
 def create_user():
-    new_user = request.get_json()  # Gets new user data from the request
+    new_user = request.get_json()
     name = new_user['name']
     age = new_user['age']
     email = new_user['email']
 
     conn = get_db_connection()
-    conn.execute('INSERT INTO users (name, age, email) VALUES (?, ?, ?)', (name, age, email))
-    conn.commit()
-    conn.close()
+    try:
+        conn.execute('INSERT INTO users (name, age, email) VALUES (?, ?, ?)', (name, age, email))
+        conn.commit()
+    except sqlite3.Error as e:
+        return jsonify({'error': str(e)}), 500
+    finally:
+        conn.close()
 
     return jsonify({'message': 'User created successfully!'}), 201
+
 
 # Route to update a user 
 @app.route('/users/<int:id>', methods=['PUT'])
@@ -50,9 +60,13 @@ def update_user(id):
     email = user_data['email']
 
     conn = get_db_connection()
-    conn.execute('UPDATE users SET name = ?, age = ?, email = ? WHERE id = ?', (name, age, email, id))
-    conn.commit()
-    conn.close()
+    try:
+        conn.execute('UPDATE users SET name = ?, age = ?, email = ? WHERE id = ?', (name, age, email, id))
+        conn.commit()
+    except sqlite3.Error as e:
+        return jsonify({'error': str(e)}), 500
+    finally:
+        conn.close()
 
     return jsonify({'message': 'User updated successfully!'})
 
@@ -60,11 +74,16 @@ def update_user(id):
 @app.route('/users/<int:id>', methods=['DELETE'])
 def delete_user(id):
     conn = get_db_connection()
-    conn.execute('DELETE FROM users WHERE id = ?', (id,))
-    conn.commit()
-    conn.close()
+    try:
+        conn.execute('DELETE FROM users WHERE id = ?', (id,))
+        conn.commit()
+    except sqlite3.Error as e:
+        return jsonify({'error': str(e)}), 500
+    finally:
+        conn.close()
 
     return jsonify({'message': 'User deleted successfully!'})
+
 
 if __name__ == '__main__':
     app.run(debug=True)
